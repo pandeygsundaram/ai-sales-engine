@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Lead, ActivityEvent } from "@/lib/types";
-import { PhoneCall, Flame, CalendarCheck, Percent, ArrowUpRight } from "lucide-react";
+import { PhoneCall, Flame, CalendarCheck, Percent } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "motion/react";
 
@@ -20,10 +20,10 @@ export function Dashboard() {
   const conversionRate = leads.length > 0 ? ((meetingsBooked / leads.length) * 100).toFixed(1) : "0.0";
 
   const stats = [
-    { name: "Total Calls Today", value: totalCalls, icon: PhoneCall, trend: "+12%" },
-    { name: "Qualified Leads", value: qualifiedLeads, icon: Flame, trend: "+4%" },
-    { name: "Meetings Booked", value: meetingsBooked, icon: CalendarCheck, trend: "+2" },
-    { name: "Conversion Rate", value: `${conversionRate}%`, icon: Percent, trend: "+1.2%" },
+    { name: "Total Calls Today", value: totalCalls, icon: PhoneCall },
+    { name: "Qualified Leads", value: qualifiedLeads, icon: Flame },
+    { name: "Meetings Booked", value: meetingsBooked, icon: CalendarCheck },
+    { name: "Conversion Rate", value: `${conversionRate}%`, icon: Percent },
   ];
 
   return (
@@ -46,12 +46,8 @@ export function Dashboard() {
               <p className="text-sm font-medium text-zinc-400">{stat.name}</p>
               <stat.icon className="size-4 text-zinc-500" />
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
+            <div className="mt-2">
               <p className="text-3xl font-semibold text-white">{stat.value}</p>
-              <span className="flex items-center text-xs font-medium text-emerald-400">
-                <ArrowUpRight className="size-3 mr-0.5" />
-                {stat.trend}
-              </span>
             </div>
           </motion.div>
         ))}
