@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     CALCOM_EVENT_TYPE_ID: str = ""
     CALCOM_BOOKING_URL: str = ""
 
+    # Google OAuth & Frontend Auth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "https://unridged-hyman-unvenomously.ngrok-free.dev/api/auth/google/callback"
+    FRONTEND_URL: str = "https://salesai.0xlocked.in"
+    JWT_SECRET: str = "supersecret-sales-engine-jwt-key-2026"
+
     class Config:
         env_file = ".env"
 

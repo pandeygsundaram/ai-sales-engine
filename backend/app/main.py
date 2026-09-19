@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import leads, calls, webhooks, whatsapp, activities, campaigns
+from app.api import leads, calls, webhooks, whatsapp, activities, campaigns, auth
 
 app = FastAPI(title="AI Sales Engine", version="1.0.0")
 
@@ -13,6 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(leads.router, prefix="/api/leads", tags=["Leads"])
 app.include_router(calls.router, prefix="/api/calls", tags=["Calls"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
