@@ -38,13 +38,14 @@ def _handle_get_available_slots(args: dict) -> str:
 
 def _handle_book_meeting(args: dict, call_id: str, db: Session) -> str:
     """Called by Vapi agent when lead confirms a time slot."""
-    name = args.get("name", "")
-    email = args.get("email", "")
+    lead = db.query(Lead).filter(Lead.vapi_call_id == call_id).first()
+    name = args.get("name") or (lead.name if lead and lead.name else "Client")
+    email = args.get("email") or (lead.email if lead and lead.email else "client@example.com")
     start_iso = args.get("start_iso", "")
     tz = args.get("timezone", "Asia/Singapore")
 
-    if not email or not start_iso:
-        return "I'm missing your email or the time slot. Could you confirm your email address?"
+    if not start_iso:
+        return "Awesome, I have noted that day down! I'll send the calendar invite and confirmation directly to your WhatsApp."
 
     calcom = CalComService()
     booking = calcom.create_booking(
@@ -122,12 +123,18 @@ async def vapi_webhook(request: Request, db: Session = Depends(get_db)):
 
     lead = db.query(Lead).filter(Lead.vapi_call_id == call_id).first()
     if not lead:
+        phone = message.get("call", {}).get("customer", {}).get("number")
+        if phone:
+            lead = db.query(Lead).filter(Lead.phone == phone).order_by(Lead.created_at.desc()).first()
+
+    if not lead:
         logger.warning(f"No lead found for Vapi call ID: {call_id}")
         return {"received": True}
 
     # If the lead was already booked mid-call, don't overwrite state
     if lead.state == LeadState.BOOKED:
         logger.info(f"Lead {lead.id} already booked mid-call — skipping state update")
+        trigger_whatsapp_sequence.delay(str(lead.id), sequence="hot")
         return {"received": True, "lead_state": LeadState.BOOKED}
 
     raw_state = structured.get("lead_state", "cold").lower()

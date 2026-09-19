@@ -30,7 +30,7 @@ def schedule_calls_for_batch(self, lead_ids: list[str]):
 
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=3600)
-def place_call(self, lead_id: str):
+def place_call(self, lead_id: str, force: bool = False):
     """Places a single Vapi call for a lead."""
     db = SessionLocal()
     try:
@@ -40,17 +40,17 @@ def place_call(self, lead_id: str):
             return
 
         # Guards
-        if lead.state in [LeadState.BOOKED, LeadState.LOST, LeadState.DNC]:
+        if not force and lead.state in [LeadState.BOOKED, LeadState.LOST, LeadState.DNC]:
             logger.info(f"Skipping lead {lead_id} — state: {lead.state}")
             return
 
-        if lead.call_attempts >= MAX_CALL_ATTEMPTS:
+        if not force and lead.call_attempts >= MAX_CALL_ATTEMPTS:
             lead.state = LeadState.COLD
             db.commit()
             logger.info(f"Lead {lead_id} maxed call attempts → COLD")
             return
 
-        if not _is_within_call_hours():
+        if not force and not _is_within_call_hours():
             # Retry in 1 hour
             raise self.retry(countdown=3600)
 

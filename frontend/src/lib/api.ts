@@ -1,7 +1,7 @@
 import { Lead, ActivityEvent } from "./types";
 import { mockLeads, mockActivities } from "./mock-data";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const USE_MOCK = false;
 
 // Helper to simulate network delay
@@ -52,6 +52,23 @@ export const api = {
     return Array.isArray(data) ? data : [];
   },
 
+  async instantCall(data: { phone: string; name?: string; email?: string; company?: string; notes?: string }): Promise<{ message: string; lead_id: string }> {
+    if (USE_MOCK) {
+      await delay(500);
+      return { message: "Mock call placed", lead_id: "mock-1" };
+    }
+    const res = await fetch(`${API_BASE_URL}/api/calls/instant`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to place call" }));
+      throw new Error(err.detail || "Failed to place call");
+    }
+    return res.json();
+  },
+
   async retryCall(leadId: string): Promise<void> {
     if (USE_MOCK) {
       await delay(500);
@@ -71,6 +88,31 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lead_id: leadId, sequence }),
+    });
+  },
+
+  async getWhatsAppMessages(phone: string): Promise<Array<{
+    sid: string;
+    direction: "outbound" | "inbound";
+    from: string;
+    to: string;
+    body: string;
+    status: string;
+    date_sent: string;
+    timestamp: string;
+  }>> {
+    const url = new URL(`${API_BASE_URL}/api/whatsapp/messages`);
+    url.searchParams.append("phone", phone);
+    const res = await fetch(url.toString());
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async sendWhatsAppMessage(phone: string, message: string): Promise<void> {
+    await fetch(`${API_BASE_URL}/api/whatsapp/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, message }),
     });
   },
 

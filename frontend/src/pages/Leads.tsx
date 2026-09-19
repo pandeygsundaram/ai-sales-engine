@@ -10,6 +10,9 @@ export function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filterState, setFilterState] = useState<string>("");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showInstantCallModal, setShowInstantCallModal] = useState(false);
+  const [instantForm, setInstantForm] = useState({ phone: "", name: "", email: "", company: "" });
+  const [instantCalling, setInstantCalling] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [launching, setLaunching] = useState(false);
   const [launchResult, setLaunchResult] = useState<string | null>(null);
@@ -56,6 +59,43 @@ export function Leads() {
       fetchLeads();
     } catch {
       alert("Invalid JSON format");
+    }
+  };
+
+  const handleInstantCall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const phone = instantForm.phone.trim().replace(" ", "");
+    if (!phone) {
+      showToast("Phone number is required", "error");
+      return;
+    }
+    if (!phone.startsWith("+")) {
+      showToast("Please include country code e.g. +91... or +1...", "error");
+      return;
+    }
+    setInstantCalling(true);
+    try {
+      const res = await api.instantCall({
+        phone,
+        name: instantForm.name.trim() || undefined,
+        email: instantForm.email.trim() || undefined,
+        company: instantForm.company.trim() || undefined,
+      });
+      showToast(res.message || `Calling ${phone} now!`);
+      setShowInstantCallModal(false);
+      setInstantForm({ phone: "", name: "", email: "", company: "" });
+      fetchLeads();
+      if (res.lead_id) {
+        setTimeout(async () => {
+          const lead = await api.getLead(res.lead_id);
+          if (lead) openDrawer(lead);
+          fetchLeads();
+        }, 1200);
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to trigger call", "error");
+    } finally {
+      setInstantCalling(false);
     }
   };
 
@@ -136,16 +176,17 @@ export function Leads() {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg ${
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-6 right-6 z-[99999] px-5 py-3.5 rounded-xl text-sm font-semibold shadow-2xl flex items-center gap-3 border ${
               toast.type === "success"
-                ? "bg-emerald-500 text-zinc-950"
-                : "bg-red-500 text-white"
+                ? "bg-zinc-900 border-emerald-500/60 text-emerald-300 shadow-emerald-950/60"
+                : "bg-zinc-900 border-red-500/60 text-red-300 shadow-red-950/60"
             }`}
           >
-            {toast.msg}
+            <div className={`size-2 rounded-full ${toast.type === "success" ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+            <span>{toast.msg}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -172,6 +213,12 @@ export function Leads() {
             <option value="lost">Lost</option>
             <option value="dnc">DNC</option>
           </select>
+          <button
+            onClick={() => setShowInstantCallModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-sm font-semibold rounded-md transition-all shadow-md shadow-emerald-500/20"
+          >
+            <PhoneCall className="size-4" /> Instant Demo Call
+          </button>
           <button
             onClick={() => setShowUploadModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-md transition-colors border border-zinc-700"
@@ -462,6 +509,117 @@ export function Leads() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Instant Demo Call Modal */}
+      <AnimatePresence>
+        {showInstantCallModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+                <div className="flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <h3 className="font-semibold text-white">Instant AI Demo Call</h3>
+                </div>
+                <button
+                  onClick={() => setShowInstantCallModal(false)}
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleInstantCall} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Phone Number <span className="text-emerald-400">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+919876543210 or +14155552671"
+                    value={instantForm.phone}
+                    onChange={(e) => setInstantForm({ ...instantForm, phone: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1">Must include country code e.g. +91 or +1</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Alex"
+                      value={instantForm.name}
+                      onChange={(e) => setInstantForm({ ...instantForm, name: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3.5 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="alex@company.com"
+                      value={instantForm.email}
+                      onChange={(e) => setInstantForm({ ...instantForm, email: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3.5 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    Company (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Acme Corp"
+                    value={instantForm.company}
+                    onChange={(e) => setInstantForm({ ...instantForm, company: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3.5 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-xs text-zinc-300 space-y-1">
+                  <div className="font-medium text-emerald-400">✨ How the Demo Works:</div>
+                  <ul className="list-disc pl-4 text-zinc-400 space-y-0.5 text-[11px]">
+                    <li>AI Agent (Alex) places an outbound voice call immediately.</li>
+                    <li>Qualifies whether the lead is <b>Hot</b>, <b>Warm</b>, or <b>Cold</b>.</li>
+                    <li>On hangup, an automated WhatsApp confirmation / follow-up sequence triggers!</li>
+                  </ul>
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={instantCalling || !instantForm.phone.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-zinc-950 text-sm font-semibold rounded-md transition-colors"
+                  >
+                    <PhoneCall className="size-4" />
+                    {instantCalling ? "Dialing..." : "Start Call Now"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInstantCallModal(false)}
+                    className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-md"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

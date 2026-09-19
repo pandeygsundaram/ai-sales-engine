@@ -18,13 +18,6 @@ export function Topbar() {
           <span className="flex size-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="text-zinc-400 font-medium tracking-tight">System Online</span>
         </div>
-        <div className="h-4 w-px bg-zinc-800"></div>
-        <button className="relative text-zinc-400 hover:text-white transition-colors">
-          <Bell className="size-5" />
-          <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-zinc-950">
-            3
-          </span>
-        </button>
       </div>
     </header>
   );

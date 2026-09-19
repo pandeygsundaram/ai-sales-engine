@@ -2,15 +2,60 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from typing import Optional
+from pydantic import BaseModel
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.lead import Lead
+from app.models.lead import Lead, LeadState
 from app.tasks.call_tasks import place_call
 
 router = APIRouter()
 
 TWILIO_BASE = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}"
 TWILIO_AUTH = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+
+
+class InstantCallRequest(BaseModel):
+    phone: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    company: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/instant")
+def instant_call(data: InstantCallRequest, db: Session = Depends(get_db)):
+    phone = data.phone.strip().replace(" ", "")
+    if not phone.startswith("+"):
+        raise HTTPException(status_code=400, detail="Phone must start with country code e.g. +91XXXXXXXXXX or +1XXXXXXXXXX")
+
+    lead = db.query(Lead).filter(Lead.phone == phone).first()
+    if not lead:
+        lead = Lead(
+            name=data.name or "Demo Lead",
+            phone=phone,
+            email=data.email,
+            company=data.company or "Demo Company",
+            notes=data.notes,
+            source="instant_demo",
+            state=LeadState.PENDING,
+        )
+        db.add(lead)
+    else:
+        if data.name:
+            lead.name = data.name
+        if data.email:
+            lead.email = data.email
+        if data.company:
+            lead.company = data.company
+        lead.state = LeadState.PENDING
+        lead.vapi_call_id = None
+
+    db.commit()
+    db.refresh(lead)
+
+    place_call.delay(str(lead.id), force=True)
+    return {"message": f"Calling {phone} now", "lead_id": str(lead.id)}
 
 
 @router.post("/{lead_id}/retry")

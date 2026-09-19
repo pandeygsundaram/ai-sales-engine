@@ -11,19 +11,15 @@ logger = logging.getLogger(__name__)
 
 # Drip sequences — (delay_days, message_template)
 WARM_SEQUENCE = [
-    (0, "Hi {name}! Thanks for your time on the call. We'd love to show you exactly how we help companies like {company} grow faster. Here's a quick overview: {calcom_url}"),
-    (3, "Hey {name}, just checking in! Have you had a chance to look at what we shared? Happy to answer any questions."),
-    (7, "Hi {name} — here's a quick case study from a client in your space: [link]. Would love to get 20 mins with you this week."),
-    (14, "Hey {name}, last reach out from our side! If the timing isn't right, totally understand. Whenever you're ready, we're here: {calcom_url}"),
+    (0, "Hi {name}! Thanks for chatting with Alex today. As promised, here is a quick overview of how we help companies like {company} scale qualified meetings with AI. Whenever you have a moment next week, check our calendar here: {calcom_url}"),
+    (3, "Hey {name}, just following up on our chat! Happy to answer any questions or share a quick 10-min case study whenever works for you."),
 ]
 
 HOT_SEQUENCE = [
-    (0, "Hi {name}! Great chatting with you. Book your demo here: {calcom_url} — takes 20 mins and we'll tailor it to {company}."),
+    (0, "Hi {name}! Great chatting with you. Your demo call is scheduled for {preferred_time}. Here is your meeting link: {calcom_url} — looking forward to speaking with you!"),
 ]
 
-COLD_SEQUENCE = [
-    (7, "Hi {name}, we spoke briefly recently. No pressure at all — just wanted to leave this here in case the timing is better later: {calcom_url}"),
-]
+COLD_SEQUENCE = []
 
 
 def _build_message(template: str, lead: Lead) -> str:
@@ -31,6 +27,7 @@ def _build_message(template: str, lead: Lead) -> str:
         name=lead.name or "there",
         company=lead.company or "your company",
         calcom_url=settings.CALCOM_BOOKING_URL,
+        preferred_time=lead.preferred_time or "our upcoming session",
     )
 
 
